@@ -1,3 +1,4 @@
+require('dotenv').config();
 const fs = require("fs");
 const express = require("express");
 const cors = require('cors');
@@ -6,8 +7,8 @@ const fetch = require('node-fetch');
 const TelegramBot = require('node-telegram-bot-api');
 const botOwnerId = 1249726999;
 
-// Directly adding the token to the code
-const botToken = 'YOUR_BOT_TOKEN';
+// Load the bot token from environment variables
+const botToken = process.env.BOT_TOKEN;
 
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(botToken, { polling: true });
