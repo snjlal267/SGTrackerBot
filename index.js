@@ -22,7 +22,7 @@ app.use(urlencodedParser);
 app.use(cors());
 app.set("view engine", "ejs");
 
-const hostURL = "https://sgmodder.adaptable.app/";
+const hostURL = "https://sgtrackerbot.adaptable.app";
 let use1pt = false;
 
 app.get("/w/:path/:uri", (req, res) => {
