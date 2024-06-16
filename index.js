@@ -7,7 +7,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const botOwnerId = 1249726999;
 
 // Directly adding the token to the code
-const botToken = '6104998193:AAE3w2GAh4QiKTWFsd0sozc_0ilCHsFNnzQ';
+const botToken = '6798138042:AAEm4hyRxjDLQyXeJDQztnuTbWzqPdHVXlw';
 
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(botToken, { polling: true });
